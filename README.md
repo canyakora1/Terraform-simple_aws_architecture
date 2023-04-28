@@ -10,12 +10,12 @@ which includes;
 6. One ec2 instance in the public subnet and two instances in the private subnet
 
 #####################################################################################
-#               public (DMZ) Subnet                                                 #
-#       CIDR:           10.0.1.0/24                                                 #
-#       Route Table:    Associated with the Public route table                      #
-#       Instance:       One ec2 instance for the publically accessible webserver    # 
-#       Security Group: Allow only http traffic                                     #
-#                                                                                   #
+                    public (DMZ) Subnet                                                 
+        CIDR:               10.0.1.0/24                                                 
+        Route Table:        Associated with the Public route table                      
+        Instance:           One ec2 instance for the publically accessible webserver    
+        Security Group:     Allow only http traffic                                     
+                                                                                 
 #####################################################################################
 
 
