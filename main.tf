@@ -1,40 +1,41 @@
 # Create a VPC
-resource "aws_vpc" "kids_castle" {
+resource "aws_vpc" "dcg_playroom" {
   cidr_block = "10.0.0.0/16"
   tags = {
-    Name = "Kids_Castle"
+    Name = "DCG_MEDIA"
   }
 }
 
 # Create public and private subnets
 resource "aws_subnet" "public_subnet" {
-  vpc_id     = aws_vpc.kids_castle.id
+  vpc_id     = aws_vpc.dcg_playroom.id
   cidr_block = "10.0.1.0/24"
+  map_public_ip_on_launch = true
   tags = {
-    Name = "Public_subnet"
+    Name = "DCG_Public_subnet"
   }
 }
 
 resource "aws_subnet" "private_app_subnet" {
-  vpc_id     = aws_vpc.kids_castle.id
+  vpc_id     = aws_vpc.dcg_playroom.id
   cidr_block = "10.0.2.0/24"
   tags = {
-    "Name" = "Private_app_subnet"
+    "Name" = "DCG_Private_app_subnet"
   }
 }
 
 resource "aws_subnet" "private_db_subnet" {
-  vpc_id     = aws_vpc.kids_castle.id
+  vpc_id     = aws_vpc.dcg_playroom.id
   cidr_block = "10.0.3.0/24"
   tags = {
-    "Name" = "Private_db_subnet"
+    "Name" = "DCG_Private_db_subnet"
   }
 
 }
 
 # Create an internet gateway
-resource "aws_internet_gateway" "castle_igw" {
-  vpc_id = aws_vpc.kids_castle.id
+resource "aws_internet_gateway" "dcg_igw" {
+  vpc_id = aws_vpc.dcg_playroom.id
 }
 
 # Create a NAT gateway and ELP aalocation
@@ -52,17 +53,17 @@ resource "aws_nat_gateway" "private_nat_gw" {
   tags = {
     Name = "private_nat_gw"
   }
-  depends_on = [aws_internet_gateway.castle_igw]
+  depends_on = [aws_internet_gateway.dcg_igw]
 }
 
 # Create a route table and associate it with the public subnet
 resource "aws_route_table" "public_rt" {
 
-  vpc_id = aws_vpc.kids_castle.id
+  vpc_id = aws_vpc.dcg_playroom.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.castle_igw.id
+    gateway_id = aws_internet_gateway.dcg_igw.id
   }
   tags = {
     Name = "public_rt"
@@ -76,7 +77,7 @@ resource "aws_route_table_association" "public" {
 
 # Create a private route table and associate it with the private subnets
 resource "aws_route_table" "private_rt" {
-  vpc_id = aws_vpc.kids_castle.id
+  vpc_id = aws_vpc.dcg_playroom.id
 
   route {
     cidr_block     = "0.0.0.0/0"
@@ -92,7 +93,7 @@ resource "aws_route_table_association" "private_rt_association" {
 resource "aws_security_group" "web_sg" {
   name_prefix = "web-"
   description = "Allow http web traffic"
-  vpc_id = aws_vpc.kids_castle.id
+  vpc_id      = aws_vpc.dcg_playroom.id
 
   ingress {
     from_port   = 80
@@ -101,11 +102,17 @@ resource "aws_security_group" "web_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
+  ingress {
+    from_port   = 22
+    description = "Allow SSH traffic from VPC"
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -117,7 +124,7 @@ resource "aws_security_group" "web_sg" {
 resource "aws_security_group" "app_sg" {
   name_prefix = "app-"
   description = "Allow traffic from web security group"
-  vpc_id = aws_vpc.kids_castle.id
+  vpc_id      = aws_vpc.dcg_playroom.id
 
   ingress {
     from_port       = 8080
@@ -133,6 +140,9 @@ resource "aws_security_group" "app_sg" {
 
 resource "aws_security_group" "db_sg" {
   name_prefix = "db-"
+  description = "Allow traffic from application security group"
+  vpc_id      = aws_vpc.dcg_playroom.id
+  
 
   ingress {
     from_port       = 3306
@@ -159,7 +169,7 @@ resource "aws_instance" "web-server" {
               EOF
 
   tags = {
-    Name = "web"
+    Name = "webserver"
   }
 }
 
@@ -183,7 +193,7 @@ resource "aws_instance" "db_server" {
   ami                    = "ami-022e1a32d3f742bd8"
   instance_type          = "t2.micro"
   subnet_id              = aws_subnet.private_db_subnet.id
-  vpc_security_group_ids = [aws_security_group.app_sg.id]
+  vpc_security_group_ids = [aws_security_group.db_sg.id]
   user_data              = <<EOF
               #!/bin/bash
               echo "Hello from app instance" > index.html
